@@ -7,5 +7,10 @@ import retrofit2.http.POST;
 public interface ApiInterface {
 
     @POST("cod")
-    Call<String> postData(@Body String a);
+    Call<EntireBody> postData(@Body String values);
+
+    @POST("getCod")
+    Call<EntireBody> getData(@Body String values);
+
+
 }
