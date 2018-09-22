@@ -1,6 +1,7 @@
 package com.example.diprivi.g_hack;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -8,6 +9,7 @@ import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -31,18 +33,26 @@ public class MainActivity extends AppCompatActivity {
     TextView dBMeter;
     MediaRecorder mRecorder;
     Thread runner;
-    private static double mEMA = 0.0;
-    static final private double EMA_FILTER = 0.6;
+
+    int i = 0;
+
+    int val = 0;
 
     final Runnable updater = new Runnable() {
 
         public void run() {
             updateTv();
         }
-
-        ;
     };
-    final Handler mHandler = new Handler();
+
+    @SuppressLint("HandlerLeak")
+    final Handler mHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            updateTv();
+            super.handleMessage(msg);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,9 +67,14 @@ public class MainActivity extends AppCompatActivity {
                     while (runner != null) {
                         try {
                             Thread.sleep(1000);
-                        } catch (InterruptedException e) {
+                            Log.i("Thread put to sleep", "  ");
+                        } catch (InterruptedException ignored) {
                         }
-                        mHandler.post(updater);
+                        if(i<6)
+                            mHandler.post(updater);
+                        else{
+                            runner = null;
+                        }
                     }
                 }
             };
@@ -81,9 +96,7 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO},
                     REQUEST_MICROPHONE);
-            return;
         } else startRecorder();
-
     }
 
     public void startRecorder() {
@@ -109,10 +122,7 @@ public class MainActivity extends AppCompatActivity {
                 android.util.Log.e("[Monkey]", "SecurityException: " +
                         android.util.Log.getStackTraceString(e));
             }
-
-            //mEMA = 0.0;
         }
-
     }
 
     public void stopRecorder() {
@@ -120,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO},
                     REQUEST_MICROPHONE);
-            return;
         } else if (mRecorder != null) {
             mRecorder.stop();
             mRecorder.release();
@@ -129,8 +138,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateTv() {
-        dBMeter.setText(Integer.toString((soundDb(getAmplitude()))) + " dB");
-        updatecloud();
+        if(i<5){
+            int curr = soundDb(getAmplitude());
+            if(curr>0){
+                dBMeter.setText(Integer.toString(curr));
+                val+=curr;
+                Log.i("Gommale google daaw", curr+" "+val+" "+i);
+                i++;
+            }
+        }
+        else{
+            updatecloud();
+            dBMeter.setText(Integer.toString(val/5));
+        }
     }
 
     public int soundDb(double ampl) {
@@ -145,16 +165,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public double getAmplitudeEMA() {
-        double amp = getAmplitude();
-        mEMA = EMA_FILTER * amp + (1.0 - EMA_FILTER) * mEMA;
-        return mEMA;
-    }
+//    public double getAmplitudeEMA() {
+//        double amp = getAmplitude();
+//        mEMA = EMA_FILTER * amp + (1.0 - EMA_FILTER) * mEMA;
+//        return mEMA;
+//    }
 
     public void updatecloud() {
         ConnectivityManager cm =
                 (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        assert cm != null;
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
         boolean isConnected = activeNetwork != null &&
                 activeNetwork.isConnected();
@@ -170,16 +191,15 @@ public class MainActivity extends AppCompatActivity {
 
             Call<String> exampleCall = apiService.postData("1000");
 
-            exampleCall.enqueue(new Callback<String>()
-            {
+            exampleCall.enqueue(new Callback<String>() {
                 @Override
-                public void onResponse (Call < String > call, Response< String > response){
+                public void onResponse(Call<String> call, Response<String> response) {
 
                 }
 
                 @Override
-                public void onFailure (Call < String > call, Throwable t){
-                    Log.i("Failed",t.getMessage());
+                public void onFailure(Call<String> call, Throwable t) {
+                    Log.i("Failed", t.getMessage());
                 }
             });
         }
@@ -191,8 +211,7 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_LOCATION: {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted, yay! do the
-                    // calendar task you need to do.
+                    getLocation();
                 } else
                     finish();
                 return;
@@ -203,10 +222,7 @@ public class MainActivity extends AppCompatActivity {
                     startRecorder();
                 } else
                     finish();
-                return;
             }
-            // other 'switch' lines to check for other
-            // permissions this app might request
         }
     }
 
