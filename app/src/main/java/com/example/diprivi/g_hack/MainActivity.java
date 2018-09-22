@@ -41,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
 
     int val = 0;
 
+    double lat,lon;
+
     final Runnable updater = new Runnable() {
 
         public void run() {
@@ -176,9 +178,10 @@ public class MainActivity extends AppCompatActivity {
                 i++;
             }
         }
-        else{
+        else if(i==5){
             updatecloud();
             dBMeter.setText(Integer.toString(val/5));
+            i++;
         }
     }
 
@@ -214,30 +217,6 @@ public class MainActivity extends AppCompatActivity {
         else {
             //TODO Put data in server
             getLocation();
-
-            ApiInterface apiService =
-                    ApiClient.getClient().create(ApiInterface.class);
-
-            Call<EntireBody> exampleCall = apiService.postData("1000");
-
-            exampleCall.enqueue(new Callback<EntireBody>()
-            {
-                @Override
-                public void onResponse (Call < EntireBody > call, Response< EntireBody > response){
-                    int res_code = response.body().getRes_code();
-                    if(res_code!=200){
-                        Log.v("server_status","SUCCESS");
-                    }
-                    else{
-                        Log.v("server_status","FAILURE");
-                    }
-                }
-
-                @Override
-                public void onFailure (Call < EntireBody > call, Throwable t){
-                    Log.i("Failed",t.getMessage());
-                }
-            });
         }
     }
 
@@ -272,7 +251,34 @@ public class MainActivity extends AppCompatActivity {
                     public void onSuccess(Location location) {
                         // Got last known location. In some rare situations this can be null.
                         if (location != null) {
-                            Log.i("TAG", "Lat " + location.getLatitude() + " long " + location.getLongitude());
+                            lat = location.getLatitude();
+                            lon = location.getLongitude();
+
+                            String value = "lat="+String.valueOf(lat)+"&&lan="+String.valueOf(lon)+"&&deci="+val/5;
+
+                            ApiInterface apiService =
+                                    ApiClient.getClient().create(ApiInterface.class);
+
+                            Call<EntireBody> exampleCall = apiService.postData(value);
+
+                            exampleCall.enqueue(new Callback<EntireBody>()
+                            {
+                                @Override
+                                public void onResponse (Call < EntireBody > call, Response< EntireBody > response){
+                                    int res_code = response.body().getRes_code();
+                                    if(res_code!=200){
+                                        Log.v("server_status","SUCCESS");
+                                    }
+                                    else{
+                                        Log.v("server_status","FAILURE");
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure (Call < EntireBody > call, Throwable t){
+                                    Log.i("Failed",t.getMessage());
+                                }
+                            });
                         } else
                             Log.i("TAG", "Location null");
                     }
