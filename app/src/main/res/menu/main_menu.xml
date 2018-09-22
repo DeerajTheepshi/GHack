@@ -5,4 +5,8 @@
         android:title="Surrounding Levels"
         app:showAsAction="never"/>
 
+    <item android:id="@+id/mapSend"
+        android:title="View On Map"
+        app:showAsAction="never"/>
+
 </menu>

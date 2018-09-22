@@ -72,6 +72,10 @@ public class MainActivity extends AppCompatActivity {
             case R.id.sendToListing:
                 Intent intent = new Intent(this, Listing.class);
                 startActivity(intent);
+
+            case R.id.mapSend:
+                Intent intent1 = new Intent(this, mapScreen.class);
+                startActivity(intent1);
         }
         return true;
     }
