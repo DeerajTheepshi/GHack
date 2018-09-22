@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
         switch (id){
             case R.id.sendToListing:
-                Intent intent = new Intent(this, Listing.class);
+                Intent intent = new Intent(this, mapScreen.class);
                 startActivity(intent);
                 return true;
             case R.id.retry:
