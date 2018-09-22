@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
@@ -18,11 +19,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.victor.loading.newton.NewtonCradleLoading;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -34,15 +37,13 @@ public class MainActivity extends AppCompatActivity {
     private final int REQUEST_MICROPHONE = 12346;
 
     TextView dBMeter;
+    TextView sugg;
     MediaRecorder mRecorder;
+    NewtonCradleLoading cradleLoading;
     Thread runner;
-
     int i = 0;
-
     int val = 0;
-
     double lat,lon;
-
     final Runnable updater = new Runnable() {
 
         public void run() {
@@ -72,6 +73,33 @@ public class MainActivity extends AppCompatActivity {
             case R.id.sendToListing:
                 Intent intent = new Intent(this, Listing.class);
                 startActivity(intent);
+                return true;
+            case R.id.retry:
+                i = 0;
+                val = 0;
+                dBMeter.setVisibility(View.INVISIBLE);
+                sugg.setVisibility(View.INVISIBLE);
+                cradleLoading.setVisibility(View.VISIBLE);
+                if (runner == null) {
+                    runner = new Thread() {
+                        public void run() {
+                            while (runner != null) {
+                                try {
+                                    Thread.sleep(1000);
+                                    Log.i("Thread put to sleep", "  ");
+                                } catch (InterruptedException ignored) {
+                                }
+                                if(i<6)
+                                    mHandler.post(updater);
+                                else{
+                                    runner = null;
+                                }
+                            }
+                        }
+                    };
+                    runner.start();
+                }
+                return true;
         }
         return true;
     }
@@ -86,11 +114,19 @@ public class MainActivity extends AppCompatActivity {
 
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.RECORD_AUDIO},
                     REQUEST_LOCATION);
+
             return;
         }
-
-
         dBMeter = findViewById(R.id.dBMeter);
+        dBMeter.setVisibility(View.INVISIBLE);
+
+        sugg = findViewById(R.id.suggestionsView);
+        sugg.setVisibility(View.INVISIBLE);
+
+        cradleLoading = findViewById(R.id.loading);
+        cradleLoading.setLoadingColor(Color.BLACK);
+        cradleLoading.setVisibility(View.VISIBLE);
+        cradleLoading.start();
 
         if (runner == null) {
             runner = new Thread() {
@@ -174,13 +210,22 @@ public class MainActivity extends AppCompatActivity {
             if(curr>0){
                 dBMeter.setText(Integer.toString(curr));
                 val+=curr;
-                Log.i("Gommale google daaw", curr+" "+val+" "+i);
                 i++;
             }
         }
         else if(i==5){
             updatecloud();
-            dBMeter.setText(Integer.toString(val/5));
+            dBMeter.setText(Integer.toString(val/5)+" dB");
+            cradleLoading.setVisibility(View.INVISIBLE);
+            if(val/5 < 60){
+                sugg.setText("This environment wont cause damage to your health !!");
+            } else if(val/5 < 85){
+                sugg.setText("If you remain more than 8 hours in this environment can cause permanent hearing damage!! ");
+            } else if (val/5 < 120){
+                sugg.setText("Even 15 minutes in this environment can cause permanent hearing damage!! ");
+            }
+            dBMeter.setVisibility(View.VISIBLE);
+            sugg.setVisibility(View.VISIBLE);
             i++;
         }
     }
@@ -194,14 +239,7 @@ public class MainActivity extends AppCompatActivity {
             return (mRecorder.getMaxAmplitude());
         else
             return 0;
-
     }
-
-//    public double getAmplitudeEMA() {
-//        double amp = getAmplitude();
-//        mEMA = EMA_FILTER * amp + (1.0 - EMA_FILTER) * mEMA;
-//        return mEMA;
-//    }
 
     public void updatecloud() {
         ConnectivityManager cm =
@@ -215,7 +253,6 @@ public class MainActivity extends AppCompatActivity {
         if (!isConnected)
             return;
         else {
-            //TODO Put data in server
             getLocation();
         }
     }
