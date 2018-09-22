@@ -3,6 +3,7 @@ package com.example.diprivi.g_hack;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.media.MediaRecorder;
@@ -15,6 +16,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -55,9 +58,35 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        switch (id){
+            case R.id.sendToListing:
+                Intent intent = new Intent(this, Listing.class);
+                startActivity(intent);
+        }
+        return true;
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED ) {
+
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.RECORD_AUDIO},
+                    REQUEST_LOCATION);
+            return;
+        }
+
 
         dBMeter = findViewById(R.id.dBMeter);
 
@@ -189,17 +218,24 @@ public class MainActivity extends AppCompatActivity {
             ApiInterface apiService =
                     ApiClient.getClient().create(ApiInterface.class);
 
-            Call<String> exampleCall = apiService.postData("1000");
+            Call<EntireBody> exampleCall = apiService.postData("1000");
 
-            exampleCall.enqueue(new Callback<String>() {
+            exampleCall.enqueue(new Callback<EntireBody>()
+            {
                 @Override
-                public void onResponse(Call<String> call, Response<String> response) {
-
+                public void onResponse (Call < EntireBody > call, Response< EntireBody > response){
+                    int res_code = response.body().getRes_code();
+                    if(res_code!=200){
+                        Log.v("server_status","SUCCESS");
+                    }
+                    else{
+                        Log.v("server_status","FAILURE");
+                    }
                 }
 
                 @Override
-                public void onFailure(Call<String> call, Throwable t) {
-                    Log.i("Failed", t.getMessage());
+                public void onFailure (Call < EntireBody > call, Throwable t){
+                    Log.i("Failed",t.getMessage());
                 }
             });
         }
@@ -211,16 +247,13 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_LOCATION: {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getLocation();
-                } else
-                    finish();
-                return;
-            }
-
-            case REQUEST_MICROPHONE: {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // permission was granted, yay! do the
+                    // calendar task you need to do.
+                }
+                else if (grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     startRecorder();
-                } else
+                }
+                else
                     finish();
             }
         }
@@ -229,7 +262,6 @@ public class MainActivity extends AppCompatActivity {
     private void getLocation() {
         FusedLocationProviderClient mFusedLocationClient = LocationServices.getFusedLocationProviderClient(MainActivity.this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_LOCATION);
             return;
